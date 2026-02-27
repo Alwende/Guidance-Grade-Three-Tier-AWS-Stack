@@ -1,0 +1,42 @@
+digraph G {
+  rankdir = "TB";
+  node [shape = rect, fontname = "sans-serif", style=filled, fillcolor=white];
+  compound=true;
+
+  subgraph cluster_aws {
+    label = "AWS Global Infrastructure";
+    style = dashed;
+    color = orange;
+
+    CloudFront [label="Amazon CloudFront\n(Global Edge CDN)", fillcolor="#FF9900", fontcolor=white];
+    Cognito [label="Amazon Cognito\n(User Identity)", fillcolor="#FF4F8B", fontcolor=white];
+
+    subgraph cluster_vpc {
+      label = "Wakwetu Production VPC";
+      color = blue;
+
+      subgraph cluster_public {
+        label = "Public Subnets (Multi-AZ)";
+        ALB [label="Application Load Balancer", fillcolor="#7AA116", fontcolor=white];
+        NAT [label="NAT Gateway", fillcolor="#2E73B8", fontcolor=white];
+      }
+
+      subgraph cluster_private {
+        label = "Private Subnets (App Tier)";
+        Fargate [label="ECS Fargate Service\n(Task x2)", fillcolor="#FF9900", fontcolor=white];
+      }
+    }
+
+    DynamoDB [label="Amazon DynamoDB\n(NoSQL Store)", fillcolor="#402770", fontcolor=white];
+  }
+
+  Internet [shape=cloud, label="Public Internet"];
+
+  Internet -> CloudFront [label="HTTPS"];
+  CloudFront -> ALB [label="Origin Fetch"];
+  ALB -> Fargate [label="Privileged Access (P80)"];
+  Fargate -> DynamoDB [label="IAM Validated CRUD"];
+  Fargate -> NAT [label="Egress Only"];
+  NAT -> Internet [label="Updates"];
+  Cognito -> Internet [label="Auth Flow"];
+}
